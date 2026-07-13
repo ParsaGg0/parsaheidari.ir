@@ -1,0 +1,327 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-jetbrains), ui-monospace, monospace;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ============================================================
+   THEME 1 — WARM DARK (default: warm charcoal + cream + amber)
+   ============================================================ */
+:root,
+.warm-dark {
+  --radius: 0.625rem;
+  --background: oklch(0.17 0.012 65);
+  --foreground: oklch(0.93 0.018 78);
+  --card: oklch(0.215 0.014 63);
+  --card-foreground: oklch(0.93 0.018 78);
+  --popover: oklch(0.215 0.014 63);
+  --popover-foreground: oklch(0.93 0.018 78);
+  --primary: oklch(0.78 0.135 68);
+  --primary-foreground: oklch(0.18 0.015 65);
+  --secondary: oklch(0.27 0.016 60);
+  --secondary-foreground: oklch(0.92 0.02 78);
+  --muted: oklch(0.25 0.012 62);
+  --muted-foreground: oklch(0.68 0.02 72);
+  --accent: oklch(0.7 0.11 55);
+  --accent-foreground: oklch(0.16 0.012 65);
+  --destructive: oklch(0.62 0.21 25);
+  --border: oklch(0.93 0.018 78 / 12%);
+  --input: oklch(0.93 0.018 78 / 14%);
+  --ring: oklch(0.78 0.135 68);
+  --chart-1: oklch(0.78 0.135 68);
+  --chart-2: oklch(0.68 0.12 150);
+  --chart-3: oklch(0.72 0.14 35);
+  --chart-4: oklch(0.7 0.1 95);
+  --chart-5: oklch(0.65 0.16 290);
+  --sidebar: oklch(0.2 0.013 63);
+  --sidebar-foreground: oklch(0.93 0.018 78);
+  --sidebar-primary: oklch(0.78 0.135 68);
+  --sidebar-primary-foreground: oklch(0.18 0.015 65);
+  --sidebar-accent: oklch(0.27 0.016 60);
+  --sidebar-accent-foreground: oklch(0.92 0.02 78);
+  --sidebar-border: oklch(0.93 0.018 78 / 12%);
+  --sidebar-ring: oklch(0.78 0.135 68);
+
+  /* notebook-specific tokens */
+  --grid-line: oklch(0.93 0.018 78 / 5%);
+  --glow: oklch(0.78 0.135 68 / 35%);
+  --selection: oklch(0.78 0.135 68 / 30%);
+  --terminal-prompt: oklch(0.78 0.135 68);
+  --paper-tint: oklch(0.17 0.012 65);
+}
+
+/* ============================================================
+   THEME 2 — PAPER LIGHT (aged paper + ink + sienna)
+   ============================================================ */
+.paper-light {
+  --background: oklch(0.965 0.014 85);
+  --foreground: oklch(0.27 0.022 55);
+  --card: oklch(0.985 0.011 85);
+  --card-foreground: oklch(0.27 0.022 55);
+  --popover: oklch(0.985 0.011 85);
+  --popover-foreground: oklch(0.27 0.022 55);
+  --primary: oklch(0.52 0.155 42);
+  --primary-foreground: oklch(0.97 0.012 85);
+  --secondary: oklch(0.92 0.016 82);
+  --secondary-foreground: oklch(0.3 0.02 55);
+  --muted: oklch(0.92 0.014 82);
+  --muted-foreground: oklch(0.48 0.02 60);
+  --accent: oklch(0.6 0.13 48);
+  --accent-foreground: oklch(0.97 0.012 85);
+  --destructive: oklch(0.55 0.2 28);
+  --border: oklch(0.27 0.022 55 / 14%);
+  --input: oklch(0.27 0.022 55 / 16%);
+  --ring: oklch(0.52 0.155 42);
+  --chart-1: oklch(0.52 0.155 42);
+  --chart-2: oklch(0.5 0.12 155);
+  --chart-3: oklch(0.6 0.14 30);
+  --chart-4: oklch(0.62 0.13 88);
+  --chart-5: oklch(0.5 0.16 290);
+  --sidebar: oklch(0.95 0.012 85);
+  --sidebar-foreground: oklch(0.27 0.022 55);
+  --sidebar-primary: oklch(0.52 0.155 42);
+  --sidebar-primary-foreground: oklch(0.97 0.012 85);
+  --sidebar-accent: oklch(0.92 0.016 82);
+  --sidebar-accent-foreground: oklch(0.3 0.02 55);
+  --sidebar-border: oklch(0.27 0.022 55 / 14%);
+  --sidebar-ring: oklch(0.52 0.155 42);
+
+  --grid-line: oklch(0.27 0.022 55 / 6%);
+  --glow: oklch(0.52 0.155 42 / 18%);
+  --selection: oklch(0.52 0.155 42 / 22%);
+  --terminal-prompt: oklch(0.52 0.155 42);
+  --paper-tint: oklch(0.965 0.014 85);
+}
+
+/* ============================================================
+   THEME 3 — PHOSPHOR CYBER (black + phosphor green terminal)
+   ============================================================ */
+.phosphor-cyber {
+  --background: oklch(0.11 0.018 145);
+  --foreground: oklch(0.86 0.2 145);
+  --card: oklch(0.15 0.022 145);
+  --card-foreground: oklch(0.86 0.2 145);
+  --popover: oklch(0.15 0.022 145);
+  --popover-foreground: oklch(0.86 0.2 145);
+  --primary: oklch(0.82 0.22 145);
+  --primary-foreground: oklch(0.12 0.02 145);
+  --secondary: oklch(0.2 0.03 145);
+  --secondary-foreground: oklch(0.86 0.2 145);
+  --muted: oklch(0.19 0.025 145);
+  --muted-foreground: oklch(0.6 0.14 145);
+  --accent: oklch(0.78 0.2 150);
+  --accent-foreground: oklch(0.12 0.02 145);
+  --destructive: oklch(0.65 0.22 25);
+  --border: oklch(0.86 0.2 145 / 16%);
+  --input: oklch(0.86 0.2 145 / 18%);
+  --ring: oklch(0.82 0.22 145);
+  --chart-1: oklch(0.82 0.22 145);
+  --chart-2: oklch(0.7 0.18 190);
+  --chart-3: oklch(0.78 0.2 150);
+  --chart-4: oklch(0.75 0.2 95);
+  --chart-5: oklch(0.68 0.2 290);
+  --sidebar: oklch(0.13 0.02 145);
+  --sidebar-foreground: oklch(0.86 0.2 145);
+  --sidebar-primary: oklch(0.82 0.22 145);
+  --sidebar-primary-foreground: oklch(0.12 0.02 145);
+  --sidebar-accent: oklch(0.2 0.03 145);
+  --sidebar-accent-foreground: oklch(0.86 0.2 145);
+  --sidebar-border: oklch(0.86 0.2 145 / 16%);
+  --sidebar-ring: oklch(0.82 0.22 145);
+
+  --grid-line: oklch(0.86 0.2 145 / 6%);
+  --glow: oklch(0.82 0.22 145 / 32%);
+  --selection: oklch(0.82 0.22 145 / 28%);
+  --terminal-prompt: oklch(0.82 0.22 145);
+  --paper-tint: oklch(0.11 0.018 145);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-jetbrains), ui-monospace, monospace;
+    /* smooth color transition when switching themes */
+    transition: background-color 0.6s ease, color 0.6s ease;
+  }
+  ::selection {
+    background-color: var(--selection);
+  }
+  /* custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+}
+
+/* ============================================================
+   Theme-transition: animate color props on structural layers
+   (kept separate from transform/shadow hover transitions)
+   ============================================================ */
+.theme-color-trans,
+.theme-color-trans * {
+  transition: background-color 0.55s ease, border-color 0.55s ease,
+    color 0.55s ease, fill 0.55s ease, stroke 0.55s ease;
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.caret {
+  display: inline-block;
+  width: 0.6ch;
+  background: var(--primary);
+  margin-left: 2px;
+  animation: caret-blink 1s steps(1) infinite;
+  border-radius: 1px;
+}
+
+@keyframes copy-flash {
+  0% { opacity: 0; transform: translateY(4px) scale(0.96); }
+  15% { opacity: 1; transform: translateY(0) scale(1); }
+  85% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-4px) scale(0.96); }
+}
+.copy-flash {
+  animation: copy-flash 1.4s ease forwards;
+}
+
+@keyframes float-grid {
+  from { background-position: 0 0; }
+  to { background-position: 48px 48px; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.6; }
+}
+
+/* phosphor scanline texture for cyber theme */
+.phosphor-cyber body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    oklch(0.82 0.22 145 / 3%) 0px,
+    oklch(0.82 0.22 145 / 3%) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+/* utility: subtle dot/line grid background */
+.bg-notebook-grid {
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* text balance for headings */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* hide scrollbar utility for chip rows */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ============================================================
+   Syntax-highlight tokens (theme-aware via CSS vars)
+   ============================================================ */
+.tok-kw    { color: var(--chart-3); font-weight: 600; }
+.tok-str   { color: var(--chart-2); }
+.tok-fn    { color: var(--primary); font-weight: 600; }
+.tok-num   { color: var(--chart-4); }
+.tok-com   { color: var(--muted-foreground); font-style: italic; }
+.tok-var   { color: var(--foreground); }
+.tok-op    { color: var(--accent); font-weight: 600; }
+.tok-punct { color: var(--muted-foreground); }
+.tok-plain { color: var(--foreground); }
+
+/* reading progress bar */
+.reading-progress-bar {
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    var(--accent)
+  );
+  box-shadow: 0 0 12px var(--glow);
+}
+
+/* focus ring polish for buttons */
+.focus-glow:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
