@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
 import { Moon, Sun, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/theme-provider";
 
 const ORDER = ["warm-dark", "paper-light", "phosphor-cyber"] as const;
 type ThemeName = (typeof ORDER)[number];
@@ -17,14 +17,28 @@ const META: Record<ThemeName, { label: string; icon: React.ReactNode }> = {
   },
 };
 
+function subscribeMounted(onStoreChange: () => void) {
+  queueMicrotask(onStoreChange);
+  return () => {};
+}
+
+function getMountedSnapshot() {
+  return true;
+}
+
+function getServerMountedSnapshot() {
+  return false;
+}
+
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = React.useSyncExternalStore(
+    subscribeMounted,
+    getMountedSnapshot,
+    getServerMountedSnapshot
+  );
 
-  const current = (ORDER as readonly string[]).includes(theme ?? "")
-    ? (theme as ThemeName)
-    : "warm-dark";
+  const current = theme;
 
   const next = React.useCallback(() => {
     const idx = ORDER.indexOf(current);

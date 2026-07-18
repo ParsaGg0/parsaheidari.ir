@@ -24,18 +24,11 @@ export function Typewriter({
   className,
   caretClassName,
 }: Props) {
-  const [mounted, setMounted] = React.useState(false);
   const [display, setDisplay] = React.useState(phrases[0] ?? "");
   const [phraseIdx, setPhraseIdx] = React.useState(0);
   const [deleting, setDeleting] = React.useState(false);
 
   React.useEffect(() => {
-    setMounted(true);
-    setDisplay("");
-  }, []);
-
-  React.useEffect(() => {
-    if (!mounted) return;
     const current = phrases[phraseIdx % phrases.length] ?? "";
 
     // finished typing → hold then start deleting
@@ -46,9 +39,11 @@ export function Typewriter({
 
     // finished deleting → next phrase
     if (deleting && display === "") {
-      setDeleting(false);
-      setPhraseIdx((i) => i + 1);
-      return;
+      const t = setTimeout(() => {
+        setDeleting(false);
+        setPhraseIdx((i) => i + 1);
+      }, 0);
+      return () => clearTimeout(t);
     }
 
     const t = setTimeout(
@@ -60,11 +55,11 @@ export function Typewriter({
       deleting ? deleteSpeed : typeSpeed
     );
     return () => clearTimeout(t);
-  }, [display, deleting, phraseIdx, phrases, typeSpeed, deleteSpeed, holdTime, mounted]);
+  }, [display, deleting, phraseIdx, phrases, typeSpeed, deleteSpeed, holdTime]);
 
   return (
     <span className={className} aria-label={phrases[0]}>
-      {mounted ? display : phrases[0]}
+      {display}
       <span className={`caret ${caretClassName ?? ""}`} aria-hidden="true">
         &nbsp;
       </span>

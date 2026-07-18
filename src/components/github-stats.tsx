@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const GITHUB_USERNAME = "ParsaGg";
+
 type GithubData = {
   repos: number;
   stars: number;
@@ -23,19 +25,75 @@ type GithubData = {
   error?: string;
 };
 
+async function fetchGithubData(): Promise<GithubData> {
+  const [reposRes, profileRes] = await Promise.all([
+    fetch(`https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100&sort=updated`, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    }),
+    fetch(`https://api.github.com/users/${GITHUB_USERNAME}`, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    }),
+  ]);
+
+  if (!reposRes.ok || !profileRes.ok) {
+    throw new Error(reposRes.status === 403 || profileRes.status === 403 ? "rate_limited" : "github_unavailable");
+  }
+
+  const repos: Array<{
+    stargazers_count: number;
+    forks_count: number;
+    fork: boolean;
+  }> = await reposRes.json();
+  const profile: { followers?: number; login?: string } = await profileRes.json();
+
+  const totals = repos.reduce(
+    (acc, repo) => {
+      if (repo.fork) return acc;
+      acc.repos += 1;
+      acc.stars += repo.stargazers_count || 0;
+      acc.forks += repo.forks_count || 0;
+      return acc;
+    },
+    { repos: 0, stars: 0, forks: 0 }
+  );
+
+  return {
+    ...totals,
+    followers: profile.followers || 0,
+    login: profile.login || GITHUB_USERNAME,
+    cached: false,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+function unavailableData(error = "fetch_failed"): GithubData {
+  return {
+    repos: 0,
+    stars: 0,
+    forks: 0,
+    followers: 0,
+    login: GITHUB_USERNAME,
+    cached: false,
+    fetchedAt: new Date().toISOString(),
+    error,
+  };
+}
+
 function useCountUp(target: number, duration = 900) {
   const [val, setVal] = React.useState(0);
   React.useEffect(() => {
-    if (target <= 0) {
-      setVal(0);
-      return;
-    }
     let raf = 0;
     const start = performance.now();
     const tick = (now: number) => {
       const p = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - p, 3);
-      setVal(Math.round(target * eased));
+      setVal(Math.round(Math.max(target, 0) * eased));
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -103,39 +161,19 @@ export function GitHubStats() {
   const [nonce, setNonce] = React.useState(0);
 
   React.useEffect(() => {
-    let active = true;
-    setLoading(true);
-    (async () => {
-      try {
-        const res = await fetch(`/api/github?n=${nonce}`, { cache: "no-store" });
-        if (res.ok) {
-          const json = await res.json();
-          if (active) {
-            setData(json);
-            setLoading(false);
-          }
-          return;
-        }
-      } catch {
-        /* fall through */
-      }
-      if (active) {
-        setData({
-          repos: 0,
-          stars: 0,
-          forks: 0,
-          followers: 0,
-          login: "ParsaGg",
-          cached: false,
-          fetchedAt: new Date().toISOString(),
-          error: "fetch_failed",
-        });
-        setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
+    const controller = new AbortController();
+    fetchGithubData()
+      .then((json) => {
+        if (!controller.signal.aborted) setData(json);
+      })
+      .catch((error: Error) => {
+        if (!controller.signal.aborted) setData(unavailableData(error.message));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
   }, [nonce]);
 
   const unavailable = !!data?.error;
@@ -144,7 +182,7 @@ export function GitHubStats() {
       icon: <FolderGit2 className="h-5 w-5" />,
       value: data?.repos ?? 0,
       label: "Public Repos",
-      hint: unavailable ? "GitHub API" : `@${data?.login ?? "ParsaGg"}`,
+      hint: unavailable ? "GitHub API" : `@${data?.login ?? GITHUB_USERNAME}`,
       live: true,
     },
     {
@@ -186,12 +224,15 @@ export function GitHubStats() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 font-mono text-xs text-muted-foreground">
           <span className="flex items-center gap-2">
             <AlertTriangle className="h-3.5 w-3.5 text-primary" />
-            GitHub API is rate-limited from this host — counters will populate
+            GitHub API is rate-limited from this browser — counters will populate
             automatically once the limit resets.
           </span>
           <button
             type="button"
-            onClick={() => setNonce((n) => n + 1)}
+            onClick={() => {
+              setLoading(true);
+              setNonce((n) => n + 1);
+            }}
             className="focus-glow inline-flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-2.5 py-1 text-foreground transition-colors hover:border-primary/40"
           >
             <RefreshCw className="h-3 w-3" />
@@ -206,11 +247,17 @@ export function GitHubStats() {
 export function GitHubStatBadge({ className }: { className?: string }) {
   const [data, setData] = React.useState<GithubData | null>(null);
   React.useEffect(() => {
-    fetch("/api/github", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => {});
+    const controller = new AbortController();
+    fetchGithubData()
+      .then((json) => {
+        if (!controller.signal.aborted) setData(json);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setData(unavailableData());
+      });
+    return () => controller.abort();
   }, []);
+
   if (data?.error) {
     return (
       <span
