@@ -26,16 +26,14 @@ type GithubData = {
 function useCountUp(target: number, duration = 900) {
   const [val, setVal] = React.useState(0);
   React.useEffect(() => {
-    if (target <= 0) {
-      setVal(0);
-      return;
-    }
     let raf = 0;
+    const startValue = val;
+    const delta = target - startValue;
     const start = performance.now();
     const tick = (now: number) => {
       const p = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - p, 3);
-      setVal(Math.round(target * eased));
+      setVal(Math.round(startValue + delta * eased));
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -99,12 +97,10 @@ function StatCell({
 
 export function GitHubStats() {
   const [data, setData] = React.useState<GithubData | null>(null);
-  const [loading, setLoading] = React.useState(true);
   const [nonce, setNonce] = React.useState(0);
 
   React.useEffect(() => {
     let active = true;
-    setLoading(true);
     (async () => {
       try {
         const res = await fetch(`/api/github?n=${nonce}`, { cache: "no-store" });
@@ -112,7 +108,6 @@ export function GitHubStats() {
           const json = await res.json();
           if (active) {
             setData(json);
-            setLoading(false);
           }
           return;
         }
@@ -130,7 +125,6 @@ export function GitHubStats() {
           fetchedAt: new Date().toISOString(),
           error: "fetch_failed",
         });
-        setLoading(false);
       }
     })();
     return () => {
@@ -138,6 +132,7 @@ export function GitHubStats() {
     };
   }, [nonce]);
 
+  const loading = data === null;
   const unavailable = !!data?.error;
   const cells = [
     {
@@ -191,7 +186,10 @@ export function GitHubStats() {
           </span>
           <button
             type="button"
-            onClick={() => setNonce((n) => n + 1)}
+            onClick={() => {
+              setData(null);
+              setNonce((n) => n + 1);
+            }}
             className="focus-glow inline-flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-2.5 py-1 text-foreground transition-colors hover:border-primary/40"
           >
             <RefreshCw className="h-3 w-3" />
