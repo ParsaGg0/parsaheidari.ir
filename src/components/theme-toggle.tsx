@@ -19,8 +19,11 @@ const META: Record<ThemeName, { label: string; icon: React.ReactNode }> = {
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = React.useSyncExternalStore(
+    React.useCallback(() => () => undefined, []),
+    () => true,
+    () => false
+  );
 
   const current = (ORDER as readonly string[]).includes(theme ?? "")
     ? (theme as ThemeName)

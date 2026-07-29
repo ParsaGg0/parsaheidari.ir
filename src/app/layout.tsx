@@ -1,21 +1,7 @@
 import type { Metadata } from "next";
-import { Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["opsz", "SOFT", "WONK"],
-});
-
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Parsa Heidari — /dev/log · Software Engineering & AI",
@@ -62,7 +48,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${fraunces.variable} ${jetbrains.variable} antialiased theme-color-trans`}
+        className="antialiased theme-color-trans"
       >
         <ThemeProvider
           attribute="class"
