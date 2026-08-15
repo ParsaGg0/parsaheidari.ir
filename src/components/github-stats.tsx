@@ -12,30 +12,184 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const GITHUB_USERNAME = "ParsaGg";
+const GITHUB_API_VERSION = "2022-11-28";
+const GITHUB_CACHE_MS = 10 * 60 * 1000;
+
 type GithubData = {
   repos: number;
   stars: number;
   forks: number;
   followers: number;
-  login: string | null;
+  login: string;
   cached: boolean;
   fetchedAt: string;
   error?: string;
 };
 
+type GithubRepo = {
+  stargazers_count: number;
+  forks_count: number;
+  fork: boolean;
+};
+
+type GithubProfile = {
+  followers: number;
+  login: string;
+};
+
+type GithubCache = {
+  expiresAt: number;
+  data: GithubData;
+};
+
+let githubCache: GithubCache | null = null;
+let githubRequest: Promise<GithubData> | null = null;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseGithubRepo(value: unknown): GithubRepo | null {
+  if (!isRecord(value)) return null;
+  const stargazersCount = value.stargazers_count;
+  const forksCount = value.forks_count;
+  const isFork = value.fork;
+
+  if (
+    typeof stargazersCount !== "number" ||
+    typeof forksCount !== "number" ||
+    typeof isFork !== "boolean"
+  ) {
+    return null;
+  }
+
+  return {
+    stargazers_count: stargazersCount,
+    forks_count: forksCount,
+    fork: isFork,
+  };
+}
+
+function parseGithubProfile(value: unknown): GithubProfile {
+  if (!isRecord(value)) {
+    throw new Error("invalid_github_profile");
+  }
+
+  const followers = value.followers;
+  const login = value.login;
+
+  if (typeof followers !== "number" || typeof login !== "string") {
+    throw new Error("invalid_github_profile");
+  }
+
+  return { followers, login };
+}
+
+function parseGithubRepos(value: unknown): GithubRepo[] {
+  if (!Array.isArray(value)) {
+    throw new Error("invalid_github_repos");
+  }
+
+  return value.map(parseGithubRepo).filter((repo): repo is GithubRepo => repo !== null);
+}
+
+function unavailableGithubData(error = "fetch_failed"): GithubData {
+  return {
+    repos: 0,
+    stars: 0,
+    forks: 0,
+    followers: 0,
+    login: GITHUB_USERNAME,
+    cached: false,
+    fetchedAt: new Date().toISOString(),
+    error,
+  };
+}
+
+async function fetchGithubJson(url: string): Promise<unknown> {
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": GITHUB_API_VERSION,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(response.status === 403 ? "rate_limited" : "github_unavailable");
+  }
+
+  return response.json();
+}
+
+async function fetchFreshGithubData(): Promise<GithubData> {
+  const [rawRepos, rawProfile] = await Promise.all([
+    fetchGithubJson(
+      `https://api.github.com/users/${GITHUB_USERNAME}/repos?per_page=100&sort=updated`
+    ),
+    fetchGithubJson(`https://api.github.com/users/${GITHUB_USERNAME}`),
+  ]);
+
+  const repositories = parseGithubRepos(rawRepos);
+  const profile = parseGithubProfile(rawProfile);
+
+  const repositoryTotals = repositories.reduce(
+    (totals, repository) => {
+      if (repository.fork) return totals;
+      return {
+        repos: totals.repos + 1,
+        stars: totals.stars + repository.stargazers_count,
+        forks: totals.forks + repository.forks_count,
+      };
+    },
+    { repos: 0, stars: 0, forks: 0 }
+  );
+
+  return {
+    ...repositoryTotals,
+    followers: profile.followers,
+    login: profile.login,
+    cached: false,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+async function loadGithubData({ forceRefresh = false } = {}): Promise<GithubData> {
+  const now = Date.now();
+
+  if (!forceRefresh && githubCache && githubCache.expiresAt > now) {
+    return { ...githubCache.data, cached: true };
+  }
+
+  if (!forceRefresh && githubRequest) {
+    return githubRequest;
+  }
+
+  githubRequest = fetchFreshGithubData()
+    .then((githubData) => {
+      githubCache = {
+        data: githubData,
+        expiresAt: Date.now() + GITHUB_CACHE_MS,
+      };
+      return githubData;
+    })
+    .catch((error: Error) => unavailableGithubData(error.message))
+    .finally(() => {
+      githubRequest = null;
+    });
+
+  return githubRequest;
+}
+
 function useCountUp(target: number, duration = 900) {
   const [val, setVal] = React.useState(0);
   React.useEffect(() => {
-    if (target <= 0) {
-      setVal(0);
-      return;
-    }
     let raf = 0;
     const start = performance.now();
     const tick = (now: number) => {
       const p = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - p, 3);
-      setVal(Math.round(target * eased));
+      setVal(Math.round(Math.max(target, 0) * eased));
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -98,74 +252,51 @@ function StatCell({
 }
 
 export function GitHubStats() {
-  const [data, setData] = React.useState<GithubData | null>(null);
+  const [githubData, setGithubData] = React.useState<GithubData | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [nonce, setNonce] = React.useState(0);
+  const [refreshCount, setRefreshCount] = React.useState(0);
 
   React.useEffect(() => {
-    let active = true;
-    setLoading(true);
-    (async () => {
-      try {
-        const res = await fetch(`/api/github?n=${nonce}`, { cache: "no-store" });
-        if (res.ok) {
-          const json = await res.json();
-          if (active) {
-            setData(json);
-            setLoading(false);
-          }
-          return;
-        }
-      } catch {
-        /* fall through */
-      }
-      if (active) {
-        setData({
-          repos: 0,
-          stars: 0,
-          forks: 0,
-          followers: 0,
-          login: "ParsaGg",
-          cached: false,
-          fetchedAt: new Date().toISOString(),
-          error: "fetch_failed",
-        });
-        setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [nonce]);
+    let isActive = true;
+    loadGithubData({ forceRefresh: refreshCount > 0 }).then((nextGithubData) => {
+      if (!isActive) return;
+      setGithubData(nextGithubData);
+      setLoading(false);
+    });
 
-  const unavailable = !!data?.error;
+    return () => {
+      isActive = false;
+    };
+  }, [refreshCount]);
+
+  const unavailable = !!githubData?.error;
   const cells = [
     {
       icon: <FolderGit2 className="h-5 w-5" />,
-      value: data?.repos ?? 0,
+      value: githubData?.repos ?? 0,
       label: "Public Repos",
-      hint: unavailable ? "GitHub API" : `@${data?.login ?? "ParsaGg"}`,
+      hint: unavailable ? "GitHub API" : `@${githubData?.login ?? GITHUB_USERNAME}`,
       live: true,
     },
     {
       icon: <Star className="h-5 w-5" />,
-      value: data?.stars ?? 0,
+      value: githubData?.stars ?? 0,
       label: "Stars Earned",
       hint: unavailable ? "temporarily limited" : "across repositories",
       live: true,
     },
     {
       icon: <GitFork className="h-5 w-5" />,
-      value: data?.forks ?? 0,
+      value: githubData?.forks ?? 0,
       label: "Forks",
       hint: unavailable ? "try refresh" : "community usage",
       live: true,
     },
     {
       icon: <Github className="h-5 w-5" />,
-      value: data?.followers ?? 0,
+      value: githubData?.followers ?? 0,
       label: "Followers",
-      hint: unavailable ? "rate-limited" : data?.cached ? "cached" : "synced now",
+      hint: unavailable ? "rate-limited" : githubData?.cached ? "cached" : "synced now",
       live: true,
     },
   ];
@@ -173,10 +304,10 @@ export function GitHubStats() {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {cells.map((c, i) => (
+        {cells.map((cell) => (
           <StatCell
-            key={i}
-            {...c}
+            key={cell.label}
+            {...cell}
             loading={loading}
             unavailable={unavailable}
           />
@@ -186,12 +317,15 @@ export function GitHubStats() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 font-mono text-xs text-muted-foreground">
           <span className="flex items-center gap-2">
             <AlertTriangle className="h-3.5 w-3.5 text-primary" />
-            GitHub API is rate-limited from this host — counters will populate
-            automatically once the limit resets.
+            GitHub API is temporarily unavailable from this browser — counters
+            will populate automatically once access recovers.
           </span>
           <button
             type="button"
-            onClick={() => setNonce((n) => n + 1)}
+            onClick={() => {
+              setLoading(true);
+              setRefreshCount((count) => count + 1);
+            }}
             className="focus-glow inline-flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-2.5 py-1 text-foreground transition-colors hover:border-primary/40"
           >
             <RefreshCw className="h-3 w-3" />
@@ -204,21 +338,27 @@ export function GitHubStats() {
 }
 
 export function GitHubStatBadge({ className }: { className?: string }) {
-  const [data, setData] = React.useState<GithubData | null>(null);
+  const [githubData, setGithubData] = React.useState<GithubData | null>(null);
+
   React.useEffect(() => {
-    fetch("/api/github", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => {});
+    let isActive = true;
+    loadGithubData().then((nextGithubData) => {
+      if (isActive) setGithubData(nextGithubData);
+    });
+
+    return () => {
+      isActive = false;
+    };
   }, []);
-  if (data?.error) {
+
+  if (githubData?.error) {
     return (
       <span
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-2.5 py-1 font-mono text-xs text-muted-foreground",
           className
         )}
-        title="GitHub API rate-limited"
+        title="GitHub API temporarily unavailable"
       >
         <Star className="h-3 w-3" />
         <span>—</span>
@@ -227,18 +367,19 @@ export function GitHubStatBadge({ className }: { className?: string }) {
       </span>
     );
   }
+
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border border-border bg-card/60 px-2.5 py-1 font-mono text-xs",
         className
       )}
-      title={`Stars: ${data?.stars ?? "…"} · Forks: ${data?.forks ?? "…"}`}
+      title={`Stars: ${githubData?.stars ?? "…"} · Forks: ${githubData?.forks ?? "…"}`}
     >
       <Star className="h-3 w-3 text-primary" />
-      <span className="tabular-nums">{data?.stars ?? "…"}</span>
+      <span className="tabular-nums">{githubData?.stars ?? "…"}</span>
       <GitFork className="ml-1 h-3 w-3 text-primary" />
-      <span className="tabular-nums">{data?.forks ?? "…"}</span>
+      <span className="tabular-nums">{githubData?.forks ?? "…"}</span>
     </span>
   );
 }

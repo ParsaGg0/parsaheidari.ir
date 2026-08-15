@@ -1,12 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
 import { Moon, Sun, TerminalSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const ORDER = ["warm-dark", "paper-light", "phosphor-cyber"] as const;
-type ThemeName = (typeof ORDER)[number];
+import { useTheme } from "@/components/theme-provider";
+import { THEME_NAMES, type ThemeName } from "@/lib/theme";
 
 const META: Record<ThemeName, { label: string; icon: React.ReactNode }> = {
   "warm-dark": { label: "Warm Dark", icon: <Moon className="h-4 w-4" /> },
@@ -19,16 +17,11 @@ const META: Record<ThemeName, { label: string; icon: React.ReactNode }> = {
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
-
-  const current = (ORDER as readonly string[]).includes(theme ?? "")
-    ? (theme as ThemeName)
-    : "warm-dark";
+  const current = theme;
 
   const next = React.useCallback(() => {
-    const idx = ORDER.indexOf(current);
-    setTheme(ORDER[(idx + 1) % ORDER.length]);
+    const idx = THEME_NAMES.indexOf(current);
+    setTheme(THEME_NAMES[(idx + 1) % THEME_NAMES.length]);
   }, [current, setTheme]);
 
   return (
@@ -44,25 +37,18 @@ export function ThemeToggle() {
       )}
     >
       <span className="relative flex h-4 w-4 items-center justify-center">
-        {/* render all icons, fade active */}
-        {mounted ? (
-          META[current].icon
-        ) : (
-          <Moon className="h-4 w-4 opacity-50" />
-        )}
+        {META[current].icon}
       </span>
       <span className="hidden sm:inline text-muted-foreground group-hover:text-foreground transition-colors">
-        {mounted ? META[current].label : "Warm Dark"}
+        {META[current].label}
       </span>
       <span className="flex gap-0.5 pl-1">
-        {ORDER.map((t) => (
+        {THEME_NAMES.map((t) => (
           <span
             key={t}
             className={cn(
               "h-1 w-1 rounded-full transition-all duration-300",
-              mounted && t === current
-                ? "bg-primary scale-125"
-                : "bg-muted-foreground/40"
+              t === current ? "bg-primary scale-125" : "bg-muted-foreground/40"
             )}
           />
         ))}
