@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://parsaheidari.ir"),
@@ -62,7 +63,7 @@ export default function RootLayout({
         {/* Prevent theme flash: set theme class before first paint */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var themes=['warm-dark','paper-light','phosphor-cyber'];var stored=localStorage.getItem('theme');var preferred=window.matchMedia('(prefers-color-scheme: light)').matches?'paper-light':'warm-dark';var theme=themes.indexOf(stored)>-1?stored:preferred;document.documentElement.classList.remove.apply(document.documentElement.classList,themes);document.documentElement.classList.add(theme);document.documentElement.style.colorScheme=theme==='paper-light'?'light':'dark';}catch(e){document.documentElement.classList.add('warm-dark');document.documentElement.style.colorScheme='dark';}})();`,
+            __html: THEME_BOOTSTRAP_SCRIPT,
           }}
         />
       </head>

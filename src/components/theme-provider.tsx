@@ -1,9 +1,14 @@
 "use client";
 
 import * as React from "react";
-
-const THEMES = ["warm-dark", "paper-light", "phosphor-cyber"] as const;
-type ThemeName = (typeof THEMES)[number];
+import {
+  DEFAULT_THEME,
+  THEME_NAMES,
+  THEME_STORAGE_KEY,
+  isThemeName,
+  themeColorScheme,
+  type ThemeName,
+} from "@/lib/theme";
 
 type ThemeContextValue = {
   theme: ThemeName;
@@ -11,64 +16,60 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
+let currentTheme: ThemeName = DEFAULT_THEME;
+const themeListeners = new Set<() => void>();
 
-let currentTheme: ThemeName = "warm-dark";
-const listeners = new Set<() => void>();
-
-function isTheme(value: string | null): value is ThemeName {
-  return THEMES.includes(value as ThemeName);
+function readDocumentTheme(): ThemeName | null {
+  if (typeof document === "undefined") return null;
+  return (
+    THEME_NAMES.find((theme) =>
+      document.documentElement.classList.contains(theme)
+    ) ?? null
+  );
 }
 
-function getPreferredTheme() {
-  if (typeof window === "undefined") return "warm-dark";
-  return window.matchMedia("(prefers-color-scheme: light)").matches
-    ? "paper-light"
-    : "warm-dark";
+function readStoredTheme(): ThemeName | null {
+  if (typeof window === "undefined") return null;
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  return isThemeName(storedTheme) ? storedTheme : null;
 }
 
-function getThemeFromDocument() {
-  if (typeof document === "undefined") return currentTheme;
-  const classList = document.documentElement.classList;
-  return THEMES.find((theme) => classList.contains(theme)) ?? currentTheme;
-}
-
-function applyTheme(theme: ThemeName, persist: boolean) {
+function applyTheme(theme: ThemeName, options: { persist: boolean }) {
   currentTheme = theme;
 
   if (typeof document !== "undefined") {
-    document.documentElement.classList.remove(...THEMES);
+    document.documentElement.classList.remove(...THEME_NAMES);
     document.documentElement.classList.add(theme);
-    document.documentElement.style.colorScheme =
-      theme === "paper-light" ? "light" : "dark";
+    document.documentElement.style.colorScheme = themeColorScheme(theme);
   }
 
-  if (persist && typeof window !== "undefined") {
-    window.localStorage.setItem("theme", theme);
+  if (options.persist && typeof window !== "undefined") {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }
 
-  listeners.forEach((listener) => listener());
+  themeListeners.forEach((listener) => listener());
 }
 
-function subscribe(listener: () => void) {
-  listeners.add(listener);
+function subscribeToTheme(listener: () => void) {
+  themeListeners.add(listener);
 
   queueMicrotask(() => {
-    const stored =
-      typeof window === "undefined" ? null : window.localStorage.getItem("theme");
-    applyTheme(isTheme(stored) ? stored : getThemeFromDocument() || getPreferredTheme(), false);
+    applyTheme(readStoredTheme() ?? readDocumentTheme() ?? DEFAULT_THEME, {
+      persist: false,
+    });
   });
 
   return () => {
-    listeners.delete(listener);
+    themeListeners.delete(listener);
   };
 }
 
-function getSnapshot() {
+function getThemeSnapshot(): ThemeName {
   return currentTheme;
 }
 
-function getServerSnapshot() {
-  return "warm-dark" as ThemeName;
+function getServerThemeSnapshot(): ThemeName {
+  return DEFAULT_THEME;
 }
 
 export function useTheme() {
@@ -81,20 +82,20 @@ export function useTheme() {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = React.useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot
+    subscribeToTheme,
+    getThemeSnapshot,
+    getServerThemeSnapshot
   );
 
-  const value = React.useMemo(
+  const contextValue = React.useMemo<ThemeContextValue>(
     () => ({
       theme,
-      setTheme: (nextTheme: ThemeName) => applyTheme(nextTheme, true),
+      setTheme: (nextTheme) => applyTheme(nextTheme, { persist: true }),
     }),
     [theme]
   );
 
   return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>
   );
 }
